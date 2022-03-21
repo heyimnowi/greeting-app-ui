@@ -13,7 +13,7 @@ function App() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [message, setMessage] = useState("");
   const [allWaves, setAllWaves] = useState<Wave[]>([])
-  const contractAddress = "0x5fDCE04821E7558225e3F96B39326A95499547d7"
+  const contractAddress = "0xe0b66CF564D8652427b91fd4c9239F158203Ea29"
   const contractABI = abi.abi;
 
   const wave = async () => {
@@ -25,7 +25,7 @@ function App() {
         const signer = provider.getSigner();
         const wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
 
-        const waveTxn = await wavePortalContract.wave(message);
+        const waveTxn = await wavePortalContract.wave(message, { gasLimit: 300000 });
 
         await waveTxn.wait();
         getAllWaves();
@@ -80,9 +80,34 @@ function App() {
   }
 
   useEffect(() => {
-    checkIfWalletIsConnected();
-    getAllWaves();
-  }, [])
+    let wavePortalContract: ethers.Contract;
+
+    const onNewWave = (from: any, timestamp: number, message: any) => {
+      console.log("NewWave", from, timestamp, message);
+      setAllWaves(prevState => [
+        ...prevState,
+        {
+          address: from,
+          timestamp: new Date(timestamp * 1000),
+          message: message,
+        },
+      ]);
+    };
+
+    if (window.ethereum) {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+
+      wavePortalContract = new ethers.Contract(contractAddress, contractABI, signer);
+      wavePortalContract.on("NewWave", onNewWave);
+    }
+
+    return () => {
+      if (wavePortalContract) {
+        wavePortalContract.off("NewWave", onNewWave);
+      }
+    };
+  }, []);
 
   const getAllWaves = async () => {
     try {
@@ -94,13 +119,12 @@ function App() {
 
         const waves = await wavePortalContract.getAllWaves();
 
-        let wavesCleaned: Wave[] = [];
-        waves.forEach((wave: { waver: any; timestamp: number; message: any; }) => {
-          wavesCleaned.push({
+        const wavesCleaned = waves.map((wave: { waver: any; timestamp: number; message: any; }) => {
+          return {
             address: wave.waver,
             timestamp: new Date(wave.timestamp * 1000),
             message: wave.message
-          });
+          };
         });
 
         setAllWaves(wavesCleaned);
