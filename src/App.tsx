@@ -12,7 +12,7 @@ interface Wave {
 function App() {
   const [currentAccount, setCurrentAccount] = useState("");
   const [message, setMessage] = useState("");
-  const [allWaves, setAllWaves] = useState([])
+  const [allWaves, setAllWaves] = useState<Wave[]>([])
   const contractAddress = "0x5fDCE04821E7558225e3F96B39326A95499547d7"
   const contractABI = abi.abi;
 
@@ -95,7 +95,7 @@ function App() {
         const waves = await wavePortalContract.getAllWaves();
 
         let wavesCleaned: Wave[] = [];
-        waves.forEach(wave => {
+        waves.forEach((wave: { waver: any; timestamp: number; message: any; }) => {
           wavesCleaned.push({
             address: wave.waver,
             timestamp: new Date(wave.timestamp * 1000),
